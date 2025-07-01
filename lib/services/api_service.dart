@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 class ApiService {
   // Use 10.0.2.2 for Android emulator, localhost for iOS simulator
   // static const baseUrl = 'http://10.0.2.2/sikap_api/php';
-  static const baseUrl = 'http://192.168.1.2';
+  static const baseUrl = 'http://192.168.1.2/sikap_api/php';
 
 
   // Authentication APIs
@@ -77,7 +77,36 @@ class ApiService {
         Uri.parse('$baseUrl/get_job_details.php?job_id=$jobId'),
       );
       
-      return jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': 'Server error: ${response.statusCode}'
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Network error: $e'
+      };
+    }
+  }
+  
+  static Future<Map<String, dynamic>> getJobDocuments(int jobId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/get_job_documents.php?job_id=$jobId'),
+      );
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'message': 'Server error: ${response.statusCode}'
+        };
+      }
     } catch (e) {
       return {
         'success': false,
@@ -159,7 +188,64 @@ class ApiService {
       // Now points to your sikap_api project (which has the uploads folder)
       return 'http://192.168.1.2/sikap_api/$imagePath';
     }
+
+    static Future<Map<String, dynamic>> getSavedJobs(int jobseekerId) async {
+      try {
+        final response = await http.get(
+          Uri.parse('$baseUrl/get_saved_jobpost.php?jobseeker_id=$jobseekerId'),
+        );
+        
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body);
+        } else {
+          return {
+            'success': false,
+            'message': 'Server error: ${response.statusCode}'
+          };
+        }
+      } catch (e) {
+        return {
+          'success': false,
+          'message': 'Network error: $e'
+        };
+      }
+    }
+
+    static Future<Map<String, dynamic>> saveJob(int jobseekerId, int jobId) async {
+      try {
+        final response = await http.post(
+          Uri.parse('$baseUrl/save_job.php'),
+          body: {
+            'jobseeker_id': jobseekerId.toString(),
+            'job_id': jobId.toString(),
+          },
+        );
+        
+        return jsonDecode(response.body);
+      } catch (e) {
+        return {
+          'success': false,
+          'message': 'Network error: $e'
+        };
+      }
+    }
+
+    static Future<Map<String, dynamic>> unsaveJob(int jobseekerId, int jobId) async {
+      try {
+        final response = await http.post(
+          Uri.parse('$baseUrl/unsave_job.php'),
+          body: {
+            'jobseeker_id': jobseekerId.toString(),
+            'job_id': jobId.toString(),
+          },
+        );
+        
+        return jsonDecode(response.body);
+      } catch (e) {
+        return {
+          'success': false,
+          'message': 'Network error: $e'
+        };
+      }
+    }
 }
-
-
-https://github.com/tjmagpantay/sikap_mobile_api.git

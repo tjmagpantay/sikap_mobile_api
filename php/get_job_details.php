@@ -1,4 +1,5 @@
 <?php
+// filepath: c:\xampp\htdocs\sikap_api\php\get_job_details.php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
@@ -57,9 +58,8 @@ try {
             eb.business_team_size,
             eb.business_established_year,
             eb.business_website,
-            eb.business_socials,
             jc.category_name,
-            GROUP_CONCAT(jps.skill_name) as required_skills
+            GROUP_CONCAT(DISTINCT jps.skill_name) as required_skills
         FROM job_post jp
         LEFT JOIN employer e ON jp.employer_id = e.employer_id
         LEFT JOIN employers_business eb ON e.employer_id = eb.employer_id
@@ -80,30 +80,23 @@ try {
     
     $job = $result->fetch_assoc();
     
-    // Get application settings
-    $settings_stmt = $conn->prepare("
-        SELECT * FROM job_post_application_settings 
+    // Get job attachments/documents
+    $attachments_stmt = $conn->prepare("
+        SELECT attachment_id, file_path 
+        FROM job_post_attachments 
         WHERE job_id = ?
     ");
-    $settings_stmt->bind_param("i", $job_id);
-    $settings_stmt->execute();
-    $settings_result = $settings_stmt->get_result();
-    $application_settings = $settings_result->fetch_assoc();
+    $attachments_stmt->bind_param("i", $job_id);
+    $attachments_stmt->execute();
+    $attachments_result = $attachments_stmt->get_result();
     
-    // Get screening questions if enabled
-    $questions = [];
-    if ($application_settings && $application_settings['screening_questions_enabled']) {
-        $questions_stmt = $conn->prepare("
-            SELECT * FROM job_post_questions 
-            WHERE job_id = ?
-        ");
-        $questions_stmt->bind_param("i", $job_id);
-        $questions_stmt->execute();
-        $questions_result = $questions_stmt->get_result();
-        
-        while ($question_row = $questions_result->fetch_assoc()) {
-            $questions[] = $question_row;
-        }
+    $attachments = [];
+    while ($attachment_row = $attachments_result->fetch_assoc()) {
+        $attachments[] = [
+            'attachment_id' => (int)$attachment_row['attachment_id'],
+            'file_path' => $attachment_row['file_path'],
+            'file_url' => 'http://192.168.1.2/sikap_api/' . $attachment_row['file_path']
+        ];
     }
     
     // Format the response
@@ -143,13 +136,11 @@ try {
             'business_industry' => $job['business_industry'],
             'business_team_size' => $job['business_team_size'],
             'business_established_year' => $job['business_established_year'],
-            'business_website' => $job['business_website'],
-            'business_socials' => $job['business_socials'] ? json_decode($job['business_socials'], true) : null
+            'business_website' => $job['business_website']
         ],
         'category' => $job['category_name'],
         'required_skills' => $job['required_skills'] ? explode(',', $job['required_skills']) : [],
-        'application_settings' => $application_settings,
-        'screening_questions' => $questions
+        'attachments' => $attachments
     ];
     
     echo json_encode([

@@ -1,4 +1,5 @@
 <?php
+// filepath: c:\xampp\htdocs\sikap_api\php\get_saved_jobpost.php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
@@ -20,14 +21,13 @@ if (empty($jobseeker_id)) {
 }
 
 try {
-    // Get job applications for the jobseeker
-    $sql = "
+    // Get saved jobs from jobseeker_saved_jobs table with correct table structure
+    $stmt = $conn->prepare("
         SELECT 
-            ja.application_id,
-            ja.application_status,
-            ja.applied_at,
-            ja.reviewed_at,
-            jp.job_id,
+            sj.saved_id,
+            sj.jobseeker_id,
+            sj.job_id,
+            sj.saved_at,
             jp.job_title,
             jp.job_type,
             jp.location,
@@ -35,57 +35,52 @@ try {
             jp.pay_range,
             jp.application_deadline,
             e.company_name,
-            eb.business_name,
             eb.business_logo,
-            jc.category_name
-        FROM job_application ja
-        JOIN job_post jp ON ja.job_id = jp.job_id
-        LEFT JOIN employer e ON jp.employer_id = e.employer_id
+            eb.business_name,
+            jc.category_name as category
+        FROM jobseeker_saved_jobs sj
+        INNER JOIN job_post jp ON sj.job_id = jp.job_id
+        INNER JOIN employer e ON jp.employer_id = e.employer_id
         LEFT JOIN employers_business eb ON e.employer_id = eb.employer_id
         LEFT JOIN job_category jc ON jp.job_category_id = jc.job_category_id
-        WHERE ja.jobseeker_id = ?
-        ORDER BY ja.applied_at DESC
-    ";
+        WHERE sj.jobseeker_id = ?
+        ORDER BY sj.saved_at DESC
+    ");
     
-    $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $jobseeker_id);
     $stmt->execute();
     $result = $stmt->get_result();
     
-    $applications = [];
+    $savedJobs = [];
     while ($row = $result->fetch_assoc()) {
-        $applications[] = [
-            'application_id' => (int)$row['application_id'],
-            'application_status' => $row['application_status'],
-            'applied_at' => $row['applied_at'],
-            'reviewed_at' => $row['reviewed_at'],
+        $savedJobs[] = [
+            'saved_id' => (int)$row['saved_id'],
+            'jobseeker_id' => (int)$row['jobseeker_id'],
+            'job_id' => (int)$row['job_id'],
+            'saved_at' => $row['saved_at'],
             'job' => [
                 'job_id' => (int)$row['job_id'],
-                'job_title' => $row['job_title'],
-                'job_type' => $row['job_type'],
-                'location' => $row['location'],
-                'workplace_option' => $row['workplace_option'],
+                'job_title' => $row['job_title'] ?? 'Unknown Job',
+                'job_type' => $row['job_type'] ?? 'Full-time',
+                'location' => $row['location'] ?? 'Location not specified',
+                'workplace_option' => $row['workplace_option'] ?? 'On-site',
                 'pay_range' => $row['pay_range'],
                 'application_deadline' => $row['application_deadline'],
-                'company_name' => $row['company_name'] ?: $row['business_name'],
+                'company_name' => $row['company_name'] ?: ($row['business_name'] ?? 'Unknown Company'),
                 'business_logo' => $row['business_logo'],
-                'category' => $row['category_name']
+                'category' => $row['category'] ?? 'General'
             ]
         ];
     }
     
     echo json_encode([
         'success' => true,
-        'data' => $applications,
-        'count' => count($applications)
+        'data' => $savedJobs,
+        'count' => count($savedJobs)
     ]);
     
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false, 
-        'message' => 'Server error: ' . $e->getMessage()
-    ]);
+    echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }
 
 $conn->close();
