@@ -1,0 +1,29 @@
+# Environment variables
+.env
+
+# Database backups
+*.sql
+*.db
+
+# Logs
+*.log
+error_log
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Uploads (optional - depends if you want to track uploads)
+uploads/
+
+# Cache
+cache/
+temp/
