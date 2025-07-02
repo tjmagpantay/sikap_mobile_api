@@ -45,7 +45,7 @@ try {
         $documents[] = [
             'attachment_id' => (int)$row['attachment_id'],
             'file_path' => $row['file_path'],
-            'file_url' => 'http://192.168.1.2/sikap_api/' . $row['file_path'],
+            'file_url' => 'http://192.168.197.85/sikap_api/' . $row['file_path'],
             'file_name' => $file_name,
             'file_extension' => $file_extension,
             'file_type' => strtoupper($file_extension)
