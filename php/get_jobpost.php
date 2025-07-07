@@ -1,9 +1,6 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
-header('Access-Control-Allow-Headers: Content-Type');
-
+// filepath: c:\xampp\htdocs\sikap_api\php\get_jobpost.php
+require_once '../config/cors-headers.php';
 require_once '../config/db_config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -18,6 +15,7 @@ try {
         SELECT 
             jp.job_id,
             jp.job_title,
+            jp.job_category_id,
             jp.job_status,
             jp.job_type,
             jp.salary,
@@ -61,6 +59,7 @@ try {
         $job_posts[] = [
             'job_id' => (int)$row['job_id'],
             'job_title' => $row['job_title'],
+            'job_category_id' => (int)$row['job_category_id'], // ← This is the key fix!
             'job_status' => $row['job_status'],
             'job_type' => $row['job_type'],
             'salary' => $row['salary'],

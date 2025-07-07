@@ -1,11 +1,7 @@
 <?php
-// filepath: c:\xampp\htdocs\sikap_api\php\register.php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST');
-header('Access-Control-Allow-Headers: Content-Type');
-
+require_once '../config/cors-headers.php';
 require_once '../config/db_config.php';
+require_once '../config/jwt_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -42,17 +38,7 @@ if (strpos($content_type, 'application/json') !== false) {
 
 // Validate required fields
 if (empty($first_name) || empty($last_name) || empty($email) || empty($password)) {
-    echo json_encode([
-        'success' => false, 
-        'message' => 'All fields are required',
-        'debug' => [
-            'first_name' => $first_name,
-            'last_name' => $last_name,
-            'email' => $email,
-            'password' => !empty($password) ? '[PROVIDED]' : '[MISSING]',
-            'content_type' => $content_type
-        ]
-    ]);
+    echo json_encode(['success' => false, 'message' => 'All fields are required']);
     exit;
 }
 
@@ -140,18 +126,29 @@ try {
     // Commit transaction
     $conn->commit();
     
-    // Return success response with user data
+    // Prepare user data for JWT
+    $user_data = [
+        'user_id' => $user_id,
+        'email' => $email,
+        'role' => 'jobseeker',
+        'role_id' => 3,
+        'profile' => [
+            'jobseeker_id' => $jobseeker_id,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'profile_completed' => 0
+        ]
+    ];
+    
+    // Generate JWT token
+    $token = JWTHelper::generateToken($user_data);
+    
+    // Return success response with token
     echo json_encode([
         'success' => true,
         'message' => 'Registration successful',
-        'user' => [
-            'user_id' => $user_id,
-            'jobseeker_id' => $jobseeker_id,
-            'email' => $email,
-            'first_name' => $first_name,
-            'last_name' => $last_name,
-            'role' => 'jobseeker'
-        ]
+        'token' => $token,
+        'user' => $user_data
     ]);
     
 } catch (Exception $e) {

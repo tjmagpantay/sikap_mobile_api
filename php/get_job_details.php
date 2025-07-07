@@ -1,10 +1,6 @@
 <?php
 // filepath: c:\xampp\htdocs\sikap_api\php\get_job_details.php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
-header('Access-Control-Allow-Headers: Content-Type');
-
+require_once '../config/cors-headers.php';
 require_once '../config/db_config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -95,7 +91,7 @@ try {
         $attachments[] = [
             'attachment_id' => (int)$attachment_row['attachment_id'],
             'file_path' => $attachment_row['file_path'],
-            'file_url' => 'http://192.168.1.2/sikap_api/' . $attachment_row['file_path']
+            'file_url' => 'http://192.168.1.4/sikap_api/' . $attachment_row['file_path']
         ];
     }
     

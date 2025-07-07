@@ -1,10 +1,7 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST');
-header('Access-Control-Allow-Headers: Content-Type');
-
+require_once '../config/cors-headers.php';
 require_once '../config/db_config.php';
+require_once '../config/jwt_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -93,17 +90,24 @@ try {
         }
     }
     
+    // Prepare user data for JWT
+    $user_data = [
+        'user_id' => $user['user_id'],
+        'email' => $user['email'],
+        'role' => $user['role_name'],
+        'role_id' => $user['role_id'],
+        'profile' => $profile_data
+    ];
+    
+    // Generate JWT token
+    $token = JWTHelper::generateToken($user_data);
+    
     // Prepare response
     $response = [
         'success' => true,
         'message' => 'Login successful',
-        'user' => [
-            'user_id' => $user['user_id'],
-            'email' => $user['email'],
-            'role' => $user['role_name'],
-            'role_id' => $user['role_id'],
-            'profile' => $profile_data
-        ]
+        'token' => $token,
+        'user' => $user_data
     ];
     
     echo json_encode($response);

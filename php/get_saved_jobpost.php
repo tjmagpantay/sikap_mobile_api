@@ -1,17 +1,17 @@
 <?php
 // filepath: c:\xampp\htdocs\sikap_api\php\get_saved_jobpost.php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
-header('Access-Control-Allow-Headers: Content-Type');
-
+require_once '../config/cors-headers.php';
 require_once '../config/db_config.php';
+require_once '../config/auth_middleware.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit;
 }
+
+// JWT AUTHENTICATION REQUIRED
+$authenticated_user = requireAuth();
 
 $jobseeker_id = $_GET['jobseeker_id'] ?? '';
 
@@ -20,8 +20,20 @@ if (empty($jobseeker_id)) {
     exit;
 }
 
+// Validate that authenticated user can access this jobseeker's saved jobs
+if ($authenticated_user->role !== 'jobseeker') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Only jobseekers can view saved jobs']);
+    exit;
+}
+
+if ($authenticated_user->profile->jobseeker_id != $jobseeker_id) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'You can only view your own saved jobs']);
+    exit;
+}
+
 try {
-    // Get saved jobs from jobseeker_saved_jobs table with correct table structure
     $stmt = $conn->prepare("
         SELECT 
             sj.saved_id,
@@ -46,11 +58,11 @@ try {
         WHERE sj.jobseeker_id = ?
         ORDER BY sj.saved_at DESC
     ");
-    
+
     $stmt->bind_param("i", $jobseeker_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $savedJobs = [];
     while ($row = $result->fetch_assoc()) {
         $savedJobs[] = [
@@ -72,16 +84,14 @@ try {
             ]
         ];
     }
-    
+
     echo json_encode([
         'success' => true,
         'data' => $savedJobs,
         'count' => count($savedJobs)
     ]);
-    
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }
 
 $conn->close();
-?>

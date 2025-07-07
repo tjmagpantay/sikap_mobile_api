@@ -1,8 +1,5 @@
 <?php
-// Test file to check database connection and API functionality
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-
+require_once '../config/cors-headers.php';
 require_once '../config/db_config.php';
 
 echo json_encode([

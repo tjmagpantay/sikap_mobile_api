@@ -27,3 +27,7 @@ uploads/
 # Cache
 cache/
 temp/
+
+#Vendor
+vendor/
+vendor/firebase/php-jwt

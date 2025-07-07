@@ -1,11 +1,35 @@
 <?php
-// filepath: c:\xampp\htdocs\sikap_api\php\save_job.php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST');
-header('Access-Control-Allow-Headers: Content-Type');
-
+require_once '../config/cors-headers.php';
 require_once '../config/db_config.php';
+require_once '../config/jwt_helper.php';
+
+// JWT Authentication Middleware
+function requireAuth() {
+    $headers = getallheaders();
+    $auth_header = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+    
+    if (empty($auth_header)) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Authorization token required']);
+        exit;
+    }
+    
+    if (strpos($auth_header, 'Bearer ') === 0) {
+        $token = substr($auth_header, 7);
+    } else {
+        $token = $auth_header;
+    }
+    
+    $validation = JWTHelper::validateToken($token);
+    
+    if (!$validation['success']) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => $validation['message']]);
+        exit;
+    }
+    
+    return $validation['data'];
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -13,11 +37,31 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$jobseeker_id = $_POST['jobseeker_id'] ?? '';
-$job_id = $_POST['job_id'] ?? '';
+// REQUIRE JWT AUTHENTICATION
+$authenticated_user = requireAuth();
 
-if (empty($jobseeker_id) || empty($job_id)) {
-    echo json_encode(['success' => false, 'message' => 'Jobseeker ID and Job ID are required']);
+// Get input data
+$content_type = $_SERVER['CONTENT_TYPE'] ?? '';
+if (strpos($content_type, 'application/json') !== false) {
+    $json_input = file_get_contents('php://input');
+    $input_data = json_decode($json_input, true);
+    $jobseeker_id = $input_data['jobseeker_id'] ?? '';
+    $job_id = $input_data['job_id'] ?? '';
+} else {
+    $jobseeker_id = $_POST['jobseeker_id'] ?? '';
+    $job_id = $_POST['job_id'] ?? '';
+}
+
+// Validate that authenticated user can save jobs for this jobseeker
+if ($authenticated_user->role !== 'jobseeker') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Only jobseekers can save jobs']);
+    exit;
+}
+
+if ($authenticated_user->profile->jobseeker_id != $jobseeker_id) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'You can only save jobs for your own profile']);
     exit;
 }
 
